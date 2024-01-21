@@ -32,7 +32,16 @@ export default function ChatPage() {
       return newChatMessages;
     });
     setMessageText("");
-    const response = await fetch(`/api/chat/sendMessage`,{
+    const response =  await fetch(`/api/chat/createNewChat`,{
+      method: "POST",
+      headers:{
+        'content-type': "application/json"
+      },
+      body: JSON.stringify({message:messageText}),
+    });
+    const json = await response.json();
+    console.log("New chat",json)
+    /* const response = await fetch(`/api/chat/sendMessage`,{
       method: "POST",
       headers:{
         'content-type': "application/json"
@@ -55,6 +64,7 @@ export default function ChatPage() {
       // バックティックを使った文字列結合。元のものにmessage.contentを追加している
       setIncomingMessage(s => `${s}${message.content}`);
     });
+    */
     setGeneratingResponse(false);
   };
   return (
