@@ -1,16 +1,29 @@
 import { ChatSidebar } from "components/ChatSidebar";
 import Head from "next/head";
 import { streamReader } from "openai-edge-stream";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {v4 as uuid} from 'uuid';
 import { Message } from "components/Message";
+import { useRouter } from "next/router";
 
 
 export default function ChatPage() {
+  const [newChatId,setNewChatId] = useState(null);
   const [incomingMessage,setIncomingMessage] = useState("");
   const [messageText,setMessageText] = useState("");
   const [newChatMessages,setNewChatMessages] = useState([]);
   const [generatingResponse,setGeneratingResponse] = useState(false);
+  const router = useRouter();
+
+  // newChatId,generatingResponseが更新されるたびに動く
+  // streamが終わると生成されたnewChatIdのページに遷移
+  useEffect(() => {
+    if(!generatingResponse && newChatId) {
+      setNewChatId(null);
+      router.push(`/chat/${newChatId}`);
+    }
+
+  },[newChatId,generatingResponse,router])
 
   const handleSubmit = async (e) => {
     // e はイベントオブジェクトを表します。フォームが送信されたときに、ブラウザはデフォルトの動作（通常はページの再読み込み）を行うのですが、
@@ -32,16 +45,7 @@ export default function ChatPage() {
       return newChatMessages;
     });
     setMessageText("");
-    const response =  await fetch(`/api/chat/createNewChat`,{
-      method: "POST",
-      headers:{
-        'content-type': "application/json"
-      },
-      body: JSON.stringify({message:messageText}),
-    });
-    const json = await response.json();
-    console.log("New chat",json)
-    /* const response = await fetch(`/api/chat/sendMessage`,{
+     const response = await fetch(`/api/chat/sendMessage`,{
       method: "POST",
       headers:{
         'content-type': "application/json"
@@ -61,10 +65,14 @@ export default function ChatPage() {
     const reader = data.getReader();
     await streamReader(reader,async (message) => {
       console.log("MESSAGE: ",message);
-      // バックティックを使った文字列結合。元のものにmessage.contentを追加している
-      setIncomingMessage(s => `${s}${message.content}`);
+      if(message.event === "newChatId") {
+        setNewChatId(message.content);
+      }else{
+        // バックティックを使った文字列結合。元のものにmessage.contentを追加している
+        setIncomingMessage(s => `${s}${message.content}`);
+      }
     });
-    */
+    
     setGeneratingResponse(false);
   };
   return (

@@ -1,6 +1,10 @@
 import Head from "next/head";
 import "../styles/globals.css";
 import { UserProvider } from '@auth0/nextjs-auth0/client';
+// Font Awesomeの自動追加されるCSSがTailwind CSSと競合するので、事前に読み込んでおく
+import { config } from '@fortawesome/fontawesome-svg-core';
+import "@fortawesome/fontawesome-svg-core/styles.css";
+config.autoAddCss = false
 
 
 function App({ Component, pageProps }) {
