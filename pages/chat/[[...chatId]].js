@@ -16,7 +16,7 @@ export default function ChatPage() {
   const router = useRouter();
 
   // newChatId,generatingResponseが更新されるたびに動く
-  // streamが終わると生成されたnewChatIdのページに遷移
+  // streamが終わると生成されたnewChatIdのページに遷移。
   useEffect(() => {
     if(!generatingResponse && newChatId) {
       setNewChatId(null);
