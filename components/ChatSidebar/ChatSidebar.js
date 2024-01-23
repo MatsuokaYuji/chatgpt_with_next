@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {faMessage,faPlus, faRightFromBracket} from '@fortawesome/free-solid-svg-icons';
 
-export const ChatSidebar = () => {
+export const ChatSidebar = ({chatId}) => {
     const [chatlist,setChatlist] = useState([]);
     // 第二引数が空なのでコンポーネントがマウントされた後一度だけ実行される
     useEffect(() =>{
@@ -17,7 +17,7 @@ export const ChatSidebar = () => {
             setChatlist(json?.chats || []);
         }; 
         loadChatList();
-    },[]);
+    },[chatId]);
 
     return (
     <div className="bg-gray-900 text-white flex flex-col overflow-hidden">
@@ -28,9 +28,9 @@ export const ChatSidebar = () => {
     </Link>
     <div className="flex-1 overflow-auto bg-gray-950">
         {chatlist.map(chat =>(
-            <Link key={chat._id} href={`/chat/${chat._id}`} className="side-menu-item">
+            <Link key={chat._id} href={`/chat/${chat._id}`} className={`side-menu-item ${chatId === chat._id ? "bg-gray-700 hover:bg-gray-700": ""} `}>
                <FontAwesomeIcon icon={faMessage} /> 
-               {chat.title}
+               <span title={chat.title} className="overflow-hidden overflow-ellipsis whitespace-nowrap">{chat.title}</span>
             </Link>
         ))}
     </div>

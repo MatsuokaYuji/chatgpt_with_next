@@ -1,3 +1,4 @@
+import { getSession } from "@auth0/nextjs-auth0";
 import { ChatSidebar } from "components/ChatSidebar";
 import Head from "next/head";
 import { streamReader } from "openai-edge-stream";
@@ -5,15 +6,39 @@ import { useEffect, useState } from "react";
 import {v4 as uuid} from 'uuid';
 import { Message } from "components/Message";
 import { useRouter } from "next/router";
+import  clientPromise  from "lib/mongodb";
+import { ObjectId } from "mongodb";
 
 
-export default function ChatPage() {
+export default function ChatPage({ chatId,title,messages = [] }) {
+  console.log("props",title,messages);
   const [newChatId,setNewChatId] = useState(null);
   const [incomingMessage,setIncomingMessage] = useState("");
   const [messageText,setMessageText] = useState("");
   const [newChatMessages,setNewChatMessages] = useState([]);
   const [generatingResponse,setGeneratingResponse] = useState(false);
+  const [fullMessage,setFullMessage] = useState("");
   const router = useRouter();
+
+
+  // chatIdが変更されるたび(つまりrouteが変わるたびに)にstateをリセットする
+  useEffect(() => {
+    setNewChatMessages([]);
+    setNewChatId(null);
+
+  },[chatId])
+
+  // save the newly streamed message to new chat messages
+  useEffect(() => {
+    if(!generatingResponse && fullMessage){
+      setNewChatMessages(prev => [...prev,{
+        _id: uuid(),
+        role:"assistant",
+        content:fullMessage
+      }])
+      setFullMessage("");
+    }
+  },[generatingResponse,fullMessage])
 
   // newChatId,generatingResponseが更新されるたびに動く
   // streamが終わると生成されたnewChatIdのページに遷移。
@@ -50,7 +75,7 @@ export default function ChatPage() {
       headers:{
         'content-type': "application/json"
       },
-      body: JSON.stringify({message:messageText}),
+      body: JSON.stringify({chatId,message:messageText}),
     });
     // response.dataではないので注意
     const data = response.body;
@@ -63,6 +88,7 @@ export default function ChatPage() {
     // 各データチャンクが到着するたびに、非同期コールバック関数（ここではasync (message) => { ... }）が実行されます。
     // これにより、データが到着するとすぐに処理が行われ、ユーザーインターフェースにリアルタイムで表示されるようになります。
     const reader = data.getReader();
+    let content = "";
     await streamReader(reader,async (message) => {
       console.log("MESSAGE: ",message);
       if(message.event === "newChatId") {
@@ -70,23 +96,28 @@ export default function ChatPage() {
       }else{
         // バックティックを使った文字列結合。元のものにmessage.contentを追加している
         setIncomingMessage(s => `${s}${message.content}`);
+        content = content + message.content;
       }
     });
-    
+    setFullMessage(content);
+    setIncomingMessage("");
     setGeneratingResponse(false);
   };
+
+  const allMessages = [...messages, ...newChatMessages];
+
   return (
     <>
       <Head>
         <title>New chat</title>
       </Head>
       <div className="grid h-screen grid-cols-[260px_1fr]">
-        <ChatSidebar />
+        <ChatSidebar chatId={chatId}/>
         {/* 子要素を垂直に配置する指示 */}
         {/* overflow-hidden overflow-scrollで最下部に固定*/}
         <div className="flex flex-col bg-gray-700 overflow-hidden">
           <div className="flex-1 text-white overflow-scroll">
-            {newChatMessages.map(message =>(
+            {allMessages.map(message =>(
               <Message key={message._id} role={message.role} content={message.content}/>
             ))}
             {/* && (...): この部分は論理AND演算子です。JavaScriptでは、A && Bの形式で、Aが真（truthy）の場合にのみBを評価し、Bの結果を返します。 */}
@@ -113,4 +144,34 @@ export default function ChatPage() {
       </div>
     </>
   );
+}
+
+export const getServerSideProps = async (ctx) => {
+  console.log("ctxの中身",ctx);
+  const chatId = ctx.params?.chatId?.[0] || null;
+  if(chatId){
+    const {user} = await getSession(ctx.req,ctx.res);
+    const client = await clientPromise;
+    const db = client.db("ChattyPete");
+    const chat = await db.collection("chats").findOne({
+      userId: user.sub,
+      _id:new ObjectId(chatId),
+
+  })
+    return {
+      props:{
+        chatId,
+        title: chat.title,
+        messages:chat.messages.map(message =>({
+          ...message,
+          _id:uuid(),
+        }))
+      },
+    };
+  }
+  return {
+    props:{}
+  }
+
+  
 }
