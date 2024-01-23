@@ -18,7 +18,10 @@ export default function ChatPage({ chatId,title,messages = [] }) {
   const [newChatMessages,setNewChatMessages] = useState([]);
   const [generatingResponse,setGeneratingResponse] = useState(false);
   const [fullMessage,setFullMessage] = useState("");
+  const [originalChatId,setOriginalChatId] = useState(chatId);
   const router = useRouter();
+
+  const routeHasChanged = chatId !== originalChatId;
 
 
   // chatIdが変更されるたび(つまりrouteが変わるたびに)にstateをリセットする
@@ -30,7 +33,7 @@ export default function ChatPage({ chatId,title,messages = [] }) {
 
   // save the newly streamed message to new chat messages
   useEffect(() => {
-    if(!generatingResponse && fullMessage){
+    if(!routeHasChanged && !generatingResponse && fullMessage){
       setNewChatMessages(prev => [...prev,{
         _id: uuid(),
         role:"assistant",
@@ -38,7 +41,7 @@ export default function ChatPage({ chatId,title,messages = [] }) {
       }])
       setFullMessage("");
     }
-  },[generatingResponse,fullMessage])
+  },[generatingResponse,fullMessage,routeHasChanged])
 
   // newChatId,generatingResponseが更新されるたびに動く
   // streamが終わると生成されたnewChatIdのページに遷移。
@@ -55,6 +58,7 @@ export default function ChatPage({ chatId,title,messages = [] }) {
     // e.preventDefault() はそのデフォルトの動作をキャンセルします。このため、ページの再読み込みが防止され、フォームのカスタム処理が行えます。
     e.preventDefault();
     setGeneratingResponse(true);
+    setOriginalChatId(chatId);
     // userがチャットで送った内容を画面上に表示する。roleはユーザー送信のメッセージなのか、gptからの返信なのかを識別して背景色を変えることなどに使える。
     // ...prevの部分では、JavaScriptのスプレッド構文が使用されています。
     // スプレッド構文は、配列やオブジェクトの要素を個々に展開するために使用されます。このコンテキストでは、prev（現在のnewChatMessagesステートの値）の各要素を新しい配列の中に個別に展開しています。
@@ -116,14 +120,20 @@ export default function ChatPage({ chatId,title,messages = [] }) {
         {/* 子要素を垂直に配置する指示 */}
         {/* overflow-hidden overflow-scrollで最下部に固定*/}
         <div className="flex flex-col bg-gray-700 overflow-hidden">
-          <div className="flex-1 text-white overflow-scroll">
+          {/* flex flex-col-reverseを追加した上でdivtag、className="mb-auto　で囲むとstreamが自動でスクロールされて、かつ最初のメッセージは一番上にくる */}
+          <div className="flex-1 text-white overflow-scroll flex flex-col-reverse">
+            <div className="mb-auto">
             {allMessages.map(message =>(
               <Message key={message._id} role={message.role} content={message.content}/>
             ))}
             {/* && (...): この部分は論理AND演算子です。JavaScriptでは、A && Bの形式で、Aが真（truthy）の場合にのみBを評価し、Bの結果を返します。 */}
-            {!!incomingMessage && (
+            {!!incomingMessage && !routeHasChanged && (
             <Message role="assistant" content={incomingMessage}/>
             )}
+            {!!incomingMessage && routeHasChanged && (
+            <Message role="notice" content="Only one message at a time. Please allow any other responses to complete before sending another message"/>
+            )}
+            </div>
 
           </div>
           <footer className="bg-gray-800 p-10">

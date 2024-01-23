@@ -8,7 +8,7 @@ export const Message = ({role,content}) => {
     const {user} = useUser();
     return (
     <div className={`grid grid-cols-[30px_1fr] gap-5 p-5 ${
-        role === "assistant" ? "bg-gray-600" : ""
+        role === "assistant" ? "bg-gray-600" : role === "notice" ? "bg-red-600" : ""
         }`}>
         <div>
             {role=== "user"  && !!user &&(
