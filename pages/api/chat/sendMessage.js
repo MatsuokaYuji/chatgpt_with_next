@@ -14,6 +14,7 @@ export default async function handler(req){
         };
 
         let newChatId;
+        let chatMessages = [];
 
         if(chatId){
             // add message to chat
@@ -29,6 +30,8 @@ export default async function handler(req){
                     content:message,
                 }),
             });
+            const json = await response.json();
+            chatMessages = json.chat.messages || [];
         }else{
             const response =  await fetch(`${req.headers.get("origin")}/api/chat/createNewChat`,{
                 method: "POST",
@@ -43,9 +46,25 @@ export default async function handler(req){
             // 作ったchatドキュメントに、openAIに投げて帰ってきたresponseのstream全てを保存したいので、主キーとなるjson._idが必要
             chatId = json._id;
             newChatId = json._id;
+            chatMessages = json.messages || [];
             console.log("sendMessageのchatIdの中身",chatId)
-
         }
+
+        const messagesToInclude = [];
+        chatMessages.reverse();
+        let usedTokens = 0;
+        for (let chatMessage of chatMessages) {
+            const messageTokens = chatMessage.content.length / 4;
+            usedTokens = usedTokens + messageTokens;
+            if(usedTokens <= 2000){
+                messagesToInclude.push(chatMessage);
+            }else {
+                break
+            }
+        }
+        messagesToInclude.reverse();
+
+
         // onAfterStreamでこのAPI実行完了時に実行されるようAPIを定義できる。
         const stream = await OpenAIEdgeStream('https://api.openai.com/v1/chat/completions',{
             headers:{
@@ -55,7 +74,7 @@ export default async function handler(req){
             method: "POST",
             body: JSON.stringify({
                 model: "gpt-3.5-turbo",
-                messages: [initialChatMessage,{content: message,role:"user"}],
+                messages: [initialChatMessage,...messagesToInclude],
                 stream: true
             })
         },{
