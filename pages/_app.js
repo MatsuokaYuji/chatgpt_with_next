@@ -3,8 +3,14 @@ import "../styles/globals.css";
 import { UserProvider } from '@auth0/nextjs-auth0/client';
 // Font Awesomeの自動追加されるCSSがTailwind CSSと競合するので、事前に読み込んでおく
 import { config } from '@fortawesome/fontawesome-svg-core';
+import { Outfit} from "next/font/google";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 config.autoAddCss = false
+
+const outfit = Outfit({ 
+  subsets: ['latin'],
+  variable: "--font-outfit",
+});
 
 
 function App({ Component, pageProps }) {
@@ -13,7 +19,10 @@ function App({ Component, pageProps }) {
       <Head>
         <link rel="icon" href="/favicon.png" />
       </Head>
+      <main className={`${outfit.variable} font-body`}> 
       <Component {...pageProps} />
+      </main>
+      
     </UserProvider>
   );
 }
