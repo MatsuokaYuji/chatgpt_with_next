@@ -9,6 +9,33 @@ export default async function handler(req, res){
         const client = await clientPromise;
         const db = client.db("ChattyPete");
         const {chatId,role,content} = req.body;
+
+        let objectId;
+        try{
+          objectId = new ObjectId(chatId);
+        }catch(e){
+            res.status(422).json({
+                message:"Invarid chatId"
+            });
+            return;
+        }
+
+        // varidate content data
+        if(!content || typeof content !== "string" || (role==="user" && content.length > 400) || (role==="assistant" && content.length > 100000)){
+            res.status(422).json({
+                message: "content is required and must be less than 400 characters",
+            });
+            return;
+        }
+
+        // varidate role
+        if(role !== "user" && role !== "assistant"){
+            res.status(422).json({
+                message: "role must be either assistant or user",
+            });
+            return;
+        }
+
         // stringからObjectIdへの変換が必要
         const chat = await db.collection("chats").findOneAndUpdate({
             _id: new ObjectId(chatId),

@@ -6,6 +6,16 @@ export default async function handler(req, res){
     try {
         const {user} = await getSession(req,res)
         const {message} = req.body;
+
+
+        // varidation
+        if(!message || typeof message !== "string" || message.length > 400){
+            res.status(422).json({
+                message: "message is required and must be less than 400 characters",
+            });
+            return;
+        }
+
         const newUserMessage = {
             role:"user",
             content:message,

@@ -7,6 +7,18 @@ export default async function handler(req){
     try{
         const preprompt1 = "Your name is Chatty Pete. An incredibly intelligent and wuick-thinking AI,that always replies with an enthusiastic and positive energy. You were created by WebDevEducation. Your response must be formatted as markdown."
         const {chatId: chatIdFromParam,message} = await req.json();
+        
+        // varidation
+        if(!message || typeof message !== "string" || message.length > 200){
+            return new Response({
+                message: "message is required and must be less than 200 characters",
+            },{
+                status:422,
+            });
+        }
+        
+        
+        
         let chatId = chatIdFromParam
         const initialChatMessage = {
             role:"system",
@@ -102,7 +114,12 @@ export default async function handler(req){
             );
         return new Response(stream);
     } catch(e){
-        console.log("errorだよ",e)
+        return new Response(
+            {message: "An error occured in sendMessage"},
+            {
+                status:500,
+            }
+    );
     }
     
 }
