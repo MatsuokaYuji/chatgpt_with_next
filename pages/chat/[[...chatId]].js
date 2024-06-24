@@ -8,6 +8,8 @@ import { Message } from "components/Message";
 import { useRouter } from "next/router";
 import  clientPromise  from "lib/mongodb";
 import { ObjectId } from "mongodb";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {faRobot} from '@fortawesome/free-solid-svg-icons';
 
 
 export default function ChatPage({ chatId,title,messages = [] }) {
@@ -122,6 +124,15 @@ export default function ChatPage({ chatId,title,messages = [] }) {
         <div className="flex flex-col bg-gray-700 overflow-hidden">
           {/* flex flex-col-reverseを追加した上でdivtag、className="mb-auto　で囲むとstreamが自動でスクロールされて、かつ最初のメッセージは一番上にくる */}
           <div className="flex-1 text-white overflow-scroll flex flex-col-reverse">
+            {!allMessages.length && !incomingMessage &&
+            <div className="m-auto justify-center flex items-center text-center">
+              <div>
+              <FontAwesomeIcon icon={faRobot} className="text-6xl text-emerald-200"/>
+              <h1 className="text-4xl font-bold text-white/50 mt-2">Ask me a question!</h1>
+              </div>
+            </div>
+            }
+            {!!allMessages.length && (
             <div className="mb-auto">
             {allMessages.map(message =>(
               <Message key={message._id} role={message.role} content={message.content}/>
@@ -134,7 +145,7 @@ export default function ChatPage({ chatId,title,messages = [] }) {
             <Message role="notice" content="Only one message at a time. Please allow any other responses to complete before sending another message"/>
             )}
             </div>
-
+          )}
           </div>
           <footer className="bg-gray-800 p-10">
             <form onSubmit={handleSubmit}>
@@ -157,17 +168,35 @@ export default function ChatPage({ chatId,title,messages = [] }) {
 }
 
 export const getServerSideProps = async (ctx) => {
-  console.log("ctxの中身",ctx);
+  // console.log("ctxの中身",ctx);
   const chatId = ctx.params?.chatId?.[0] || null;
   if(chatId){
+    // chatidがmondbのobjectidであるかをチェック
+    let objectId;
+    try{
+      objectId = new ObjectId(chatId);
+    }catch(e){
+      return {
+        redirect:{
+          destination:"/chat"
+        }
+      }
+    }
+
     const {user} = await getSession(ctx.req,ctx.res);
     const client = await clientPromise;
     const db = client.db("ChattyPete");
     const chat = await db.collection("chats").findOne({
       userId: user.sub,
       _id:new ObjectId(chatId),
-
-  })
+  });
+  if(!chat){
+    return {
+      redirect:{
+        destination:"/chat"
+      }
+    }
+  }
     return {
       props:{
         chatId,

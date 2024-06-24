@@ -39,6 +39,7 @@ export default function Home() {
   );
 }
 
+// loginしたら/chatに遷移する
 export const getServerSideProps = async (ctx) =>{
   const session = await getSession(ctx.req,ctx.res);
   if (!!session){
